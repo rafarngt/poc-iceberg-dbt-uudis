@@ -21,10 +21,10 @@ spark = (
     SparkSession.builder
     .appName("simulate_sap_update")
     .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
-    .config("spark.sql.catalog.local", "org.apache.iceberg.spark.SparkCatalog")
-    .config("spark.sql.catalog.local.type", "hadoop")
-    .config("spark.sql.catalog.local.warehouse", "/opt/data/warehouse")
-    .config("spark.sql.defaultCatalog", "local")
+    .config("spark.sql.catalog.iceberg", "org.apache.iceberg.spark.SparkCatalog")
+    .config("spark.sql.catalog.iceberg.type", "hadoop")
+    .config("spark.sql.catalog.iceberg.warehouse", "/opt/data/warehouse")
+    .config("spark.sql.defaultCatalog", "iceberg")
     .getOrCreate()
 )
 
@@ -36,11 +36,11 @@ print(f"{'='*60}\n")
 
 # ─── Leer tabla bronze actual ───────────────────────────────
 print("Estado ANTES del update en bronze:")
-spark.sql("SELECT center_cd, center_name, status, source_updated_at FROM local.bronze.bronze_cost_centers").show()
+spark.sql("SELECT center_cd, center_name, status, source_updated_at FROM iceberg.bronze.bronze_cost_centers").show()
 
 # ─── MERGE bronze: simular updates SAP ──────────────────────
 spark.sql(f"""
-    MERGE INTO local.bronze.bronze_cost_centers AS target
+    MERGE INTO iceberg.bronze.bronze_cost_centers AS target
     USING (
         SELECT * FROM VALUES
             -- cd004: INACTIVE -> ACTIVE  (update de status)
@@ -61,7 +61,7 @@ spark.sql(f"""
 """)
 
 print("\nEstado DESPUES del update en bronze:")
-spark.sql("SELECT center_cd, center_name, status, source_updated_at FROM local.bronze.bronze_cost_centers ORDER BY center_cd").show()
+spark.sql("SELECT center_cd, center_name, status, source_updated_at FROM iceberg.bronze.bronze_cost_centers ORDER BY center_cd").show()
 
 print("\n" + "="*60)
 print("  AHORA ejecuta: dbt run  (desde el contenedor dbt_runner)")

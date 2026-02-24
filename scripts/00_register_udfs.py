@@ -34,11 +34,11 @@ spark = (
     .appName("register_udfs")
     .config("spark.sql.extensions",
             "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
-    .config("spark.sql.catalog.local",
+    .config("spark.sql.catalog.iceberg",
             "org.apache.iceberg.spark.SparkCatalog")
-    .config("spark.sql.catalog.local.type", "hadoop")
-    .config("spark.sql.catalog.local.warehouse", "/opt/data/warehouse")
-    .config("spark.sql.defaultCatalog", "local")
+    .config("spark.sql.catalog.iceberg.type", "hadoop")
+    .config("spark.sql.catalog.iceberg.warehouse", "/opt/data/warehouse")
+    .config("spark.sql.defaultCatalog", "iceberg")
     .getOrCreate()
 )
 

@@ -16,21 +16,21 @@ spark = (
     SparkSession.builder
     .appName("init_schemas")
     .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
-    .config("spark.sql.catalog.local", "org.apache.iceberg.spark.SparkCatalog")
-    .config("spark.sql.catalog.local.type", "hadoop")
-    .config("spark.sql.catalog.local.warehouse", "/opt/data/warehouse")
-    .config("spark.sql.defaultCatalog", "local")
+    .config("spark.sql.catalog.iceberg", "org.apache.iceberg.spark.SparkCatalog")
+    .config("spark.sql.catalog.iceberg.type", "hadoop")
+    .config("spark.sql.catalog.iceberg.warehouse", "/opt/data/warehouse")
+    .config("spark.sql.defaultCatalog", "iceberg")
     .getOrCreate()
 )
 
 # ── Namespaces ───────────────────────────────────────────────
-spark.sql("CREATE NAMESPACE IF NOT EXISTS local.bronze")
-spark.sql("CREATE NAMESPACE IF NOT EXISTS local.silver")
-spark.sql("CREATE NAMESPACE IF NOT EXISTS local.gold")
-spark.sql("CREATE NAMESPACE IF NOT EXISTS local.raw")
+spark.sql("CREATE NAMESPACE IF NOT EXISTS iceberg.bronze")
+spark.sql("CREATE NAMESPACE IF NOT EXISTS iceberg.silver")
+spark.sql("CREATE NAMESPACE IF NOT EXISTS iceberg.gold")
+spark.sql("CREATE NAMESPACE IF NOT EXISTS iceberg.raw")
 
 print("✓ Namespaces creados:")
-spark.sql("SHOW NAMESPACES IN local").show()
+spark.sql("SHOW NAMESPACES IN iceberg").show()
 
 # ── UDFs de Surrogate Keys ───────────────────────────────────
 from pyspark.sql.functions import udf
