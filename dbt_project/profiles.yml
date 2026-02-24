@@ -7,6 +7,7 @@ iceberg_spark:
       host: spark-thrift       # nombre del servicio en docker-compose
       port: 10000
       user: sparkuser
+      token: dummy
       http_path: cliservice
       schema: default          # dbt usa este como database base
       connect_retries: 5
