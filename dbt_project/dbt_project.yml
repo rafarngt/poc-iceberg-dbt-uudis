@@ -36,5 +36,4 @@ models:
 seeds:
   iceberg_scd_poc:
     +schema: raw
-    +file_format: iceberg
-    +table_type: iceberg
+    +file_format: parquet
