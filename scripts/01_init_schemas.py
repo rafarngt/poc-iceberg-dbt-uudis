@@ -29,8 +29,7 @@ spark.sql("CREATE NAMESPACE IF NOT EXISTS iceberg.silver")
 spark.sql("CREATE NAMESPACE IF NOT EXISTS iceberg.gold")
 spark.sql("CREATE NAMESPACE IF NOT EXISTS iceberg.raw")
 
-print("✓ Namespaces creados:")
-spark.sql("SHOW NAMESPACES").show()
+print("✓ Namespaces creados: iceberg.bronze, iceberg.silver, iceberg.gold, iceberg.raw")
 
 # ── UDFs de Surrogate Keys ───────────────────────────────────
 from pyspark.sql.functions import udf
