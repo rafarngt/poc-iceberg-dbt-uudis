@@ -31,6 +31,7 @@ services:
           --conf spark.sql.hive.thriftServer.singleSession=true \
           --hiveconf hive.server2.thrift.bind.host=0.0.0.0 \
           --hiveconf hive.server2.thrift.port=10000 \
+          --hiveconf hive.server2.authentication=NOSASL \
         && tail -f /opt/spark/logs/*.out
     healthcheck:
       test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/10000"]
