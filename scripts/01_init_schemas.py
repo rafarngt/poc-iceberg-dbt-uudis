@@ -24,6 +24,7 @@ spark = (
 )
 
 # ── Namespaces ───────────────────────────────────────────────
+spark.sql("CREATE NAMESPACE IF NOT EXISTS iceberg.default")
 spark.sql("CREATE NAMESPACE IF NOT EXISTS iceberg.bronze")
 spark.sql("CREATE NAMESPACE IF NOT EXISTS iceberg.silver")
 spark.sql("CREATE NAMESPACE IF NOT EXISTS iceberg.gold")
