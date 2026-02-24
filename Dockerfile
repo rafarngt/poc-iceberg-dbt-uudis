@@ -63,6 +63,7 @@ RUN pip3 install --no-cache-dir --break-system-packages \
 # Create spark-defaults.conf with Iceberg configuration
 RUN mkdir -p ${SPARK_HOME}/conf
 COPY spark_conf/spark-defaults.conf ${SPARK_HOME}/conf/spark-defaults.conf
+COPY spark_conf/hive-site.xml ${SPARK_HOME}/conf/hive-site.xml
 
 # Create non-root user
 RUN useradd -m sparkuser \
