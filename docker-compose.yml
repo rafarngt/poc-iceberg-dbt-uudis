@@ -17,7 +17,6 @@ services:
     environment:
       - SPARK_HOME=/opt/spark
       - DBT_PROFILES_DIR=/dbt_project
-      - HIVE_SERVER2_THRIFT_PORT=10000
     command:
       - bash
       - -c
@@ -30,12 +29,10 @@ services:
           --conf spark.sql.catalog.iceberg.warehouse=/opt/data/warehouse \
           --conf spark.sql.defaultCatalog=iceberg \
           --conf spark.sql.hive.thriftServer.singleSession=true \
+          --conf "spark.driver.extraJavaOptions=-Dhive.server2.authentication=NOSASL" \
           --hiveconf hive.server2.thrift.bind.host=0.0.0.0 \
           --hiveconf hive.server2.thrift.port=10000 \
           --hiveconf hive.server2.authentication=NOSASL \
-          --hiveconf hive.server2.transport.mode=http \
-          --hiveconf hive.server2.thrift.http.port=10000 \
-          --hiveconf hive.server2.thrift.http.path=cliservice \
         && tail -f /opt/spark/logs/*.out
     healthcheck:
       test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/10000"]
