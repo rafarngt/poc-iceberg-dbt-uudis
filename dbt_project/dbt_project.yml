@@ -1,0 +1,40 @@
+name: 'iceberg_scd_poc'
+version: '1.0.0'
+config-version: 2
+
+profile: 'iceberg_spark'
+
+model-paths:   ["models"]
+seed-paths:    ["seeds"]
+test-paths:    ["tests"]
+macro-paths:   ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  iceberg_scd_poc:
+
+    bronze:
+      +schema: bronze
+      +file_format: iceberg
+      +table_type: iceberg
+
+    silver:
+      +schema: silver
+      +file_format: iceberg
+      +table_type: iceberg
+
+    gold:
+      +schema: gold
+      +file_format: iceberg
+      +table_type: iceberg
+
+seeds:
+  iceberg_scd_poc:
+    +schema: raw
+    +file_format: iceberg
+    +table_type: iceberg

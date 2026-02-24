@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: bronze_cost_centers
+    description: >
+      Capa Bronze: ingesta raw de centros de costo desde SAP.
+      Upsert por center_cd via Iceberg MERGE. Sin transformaciones de negocio.
+    columns:
+      - name: center_cd
+        description: Clave natural SAP. Unique key para MERGE.
+        tests:
+          - not_null
+          - unique
+      - name: center_name
+        description: Nombre del centro de costo
+      - name: region
+        description: Region
+      - name: country
+        description: Pais
+      - name: cost_type
+        description: Tipo de costo OPEX/CAPEX
+      - name: status
+        description: Estado en SAP
+      - name: valid_from
+        description: Fecha de vigencia en SAP
+      - name: source_updated_at
+        description: Timestamp del cambio en el origen SAP
+      - name: _ingested_at
+        description: Timestamp de cuando fue ingestado en el datalake
+      - name: _source_system
+        description: Sistema de origen (SAP)

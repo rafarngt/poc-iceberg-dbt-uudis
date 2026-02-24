@@ -1,0 +1,24 @@
+version: 2
+
+seeds:
+  - name: sap_cost_centers_raw
+    description: >
+      Datos de centros de costo provenientes del sistema SAP (origen).
+      Este seed simula la capa de aterrizaje (landing) antes de bronze.
+    columns:
+      - name: center_cd
+        description: Clave natural del centro de costo en SAP
+      - name: center_name
+        description: Nombre del centro de costo
+      - name: region
+        description: Region geografica
+      - name: country
+        description: Pais (ISO 2)
+      - name: cost_type
+        description: Tipo de costo (OPEX / CAPEX)
+      - name: status
+        description: Estado en SAP (ACTIVE / INACTIVE)
+      - name: valid_from
+        description: Fecha desde la que es valido en SAP
+      - name: updated_at
+        description: Timestamp del ultimo cambio en SAP

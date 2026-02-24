@@ -1,0 +1,47 @@
+version: 2
+
+models:
+  - name: gold_cost_centers_comparison
+    description: >
+      Vista comparativa SCD1 vs SCD2 side-by-side.
+      Permite ver claramente como el sk_name se comporta diferente
+      ante un update en el origen SAP:
+        - SCD1: el sk_name siempre es el mismo (estable)
+        - SCD2: el sk_name de la version vigente cambia con cada update
+    columns:
+      - name: center_cd
+        description: Clave natural SAP
+        tests:
+          - not_null
+          - unique
+      - name: sk1_uuid
+        description: UUID asignado en SCD1 (nunca cambia)
+      - name: sk2_uuid_current
+        description: UUID de la version vigente en SCD2 (cambia con cada update)
+      - name: has_history
+        description: true si el registro tuvo al menos un update en SAP
+      - name: scd2_total_versions
+        description: Numero total de versiones en SCD2 para este center_cd
+
+  - name: gold_cost_centers_scd2_history
+    description: >
+      Historial completo de versiones SCD2. Permite consultas
+      point-in-time para saber el estado de un centro en cualquier fecha.
+    columns:
+      - name: sk_name
+        description: UUID unico por version
+        tests:
+          - not_null
+          - unique
+      - name: center_cd
+        description: Clave natural SAP
+        tests:
+          - not_null
+      - name: is_current
+        description: true si es la version vigente
+      - name: valid_from_sk
+        description: Inicio de vigencia del SK
+      - name: valid_to
+        description: Fin de vigencia (NULL si vigente)
+      - name: record_state
+        description: VIGENTE o HISTORICO

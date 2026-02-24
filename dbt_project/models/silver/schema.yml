@@ -1,0 +1,76 @@
+version: 2
+
+models:
+  - name: silver_cost_centers_scd1
+    description: >
+      Capa Silver - SCD Type 1: UUID estable por centro de costo.
+      El sk_name se genera UNA vez y nunca cambia aunque el registro
+      se actualice en SAP. Solo existe una fila por center_cd.
+      Ideal cuando el consumidor downstream NO necesita historial.
+    columns:
+      - name: sk_name
+        description: >
+          Surrogate Key (UUID). Generado en la primera aparicion del center_cd.
+          NUNCA cambia aunque el registro se actualice en SAP.
+        tests:
+          - not_null
+          - unique
+      - name: center_cd
+        description: Clave natural de SAP. Unique en esta tabla (SCD1).
+        tests:
+          - not_null
+          - unique
+      - name: center_name
+        description: Nombre actual del centro (sobreescrito en updates)
+      - name: region
+        description: Region actual
+      - name: country
+        description: Pais actual
+      - name: cost_type
+        description: Tipo de costo actual (OPEX/CAPEX)
+      - name: status
+        description: Estado actual en SAP
+      - name: valid_from
+        description: Fecha de vigencia en SAP
+      - name: source_updated_at
+        description: Timestamp del ultimo cambio en SAP
+      - name: _silver_updated_at
+        description: Timestamp de cuando fue procesado en silver
+      - name: _source_system
+        description: Sistema de origen
+
+  - name: silver_cost_centers_scd2
+    description: >
+      Capa Silver - SCD Type 2: historial completo de cambios.
+      Cada cambio en SAP genera un NUEVO registro con NUEVO uuid (sk_name).
+      El registro anterior se cierra (is_current=false, valid_to != null).
+      Ideal cuando el consumidor downstream necesita saber el estado
+      historico en un punto en el tiempo (point-in-time queries).
+    columns:
+      - name: sk_name
+        description: >
+          Surrogate Key (UUID). Unico por VERSION del registro.
+          Un mismo center_cd puede tener multiples sk_name (uno por cambio).
+        tests:
+          - not_null
+          - unique
+      - name: center_cd
+        description: Clave natural de SAP. NO es unique (puede tener N versiones).
+        tests:
+          - not_null
+      - name: is_current
+        description: true = version vigente, false = version historica
+        tests:
+          - not_null
+      - name: valid_from_sk
+        description: Timestamp desde cuando aplica este sk_name
+      - name: valid_to
+        description: Timestamp hasta cuando aplico (NULL si is_current=true)
+      - name: center_name
+        description: Nombre en este periodo de vigencia
+      - name: status
+        description: Estado en este periodo de vigencia
+      - name: source_updated_at
+        description: Timestamp del cambio en SAP que origino esta version
+      - name: _silver_created_at
+        description: Timestamp de creacion del registro en silver

@@ -1,0 +1,63 @@
+services:
+
+  # ─────────────────────────────────────────────
+  # Spark + Thrift Server (dbt connects here)
+  # ─────────────────────────────────────────────
+  spark-thrift:
+    build: .
+    image: spark-iceberg-dbt:latest
+    container_name: spark_thrift_server
+    volumes:
+      - ./data:/opt/data
+      - ./dbt_project:/dbt_project
+      - ./scripts:/scripts
+    ports:
+      - "4040:4040"   # Spark UI
+      - "10000:10000" # HiveServer2 / Thrift (dbt connects here)
+    environment:
+      - SPARK_HOME=/opt/spark
+      - DBT_PROFILES_DIR=/dbt_project
+    command: >
+      bash -c "
+        /opt/spark/sbin/start-thriftserver.sh
+          --master local[*]
+          --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
+          --conf spark.sql.catalog.local=org.apache.iceberg.spark.SparkCatalog
+          --conf spark.sql.catalog.local.type=hadoop
+          --conf spark.sql.catalog.local.warehouse=/opt/data/warehouse
+          --conf spark.sql.defaultCatalog=local
+          --conf spark.sql.hive.thriftServer.singleSession=true
+          --hiveconf hive.server2.thrift.bind.host=0.0.0.0
+          --hiveconf hive.server2.thrift.port=10000
+        && tail -f /opt/spark/logs/*.out
+      "
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/10000"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ─────────────────────────────────────────────
+  # dbt runner (runs models against Thrift Server)
+  # ─────────────────────────────────────────────
+  dbt:
+    build: .
+    image: spark-iceberg-dbt:latest
+    container_name: dbt_runner
+    depends_on:
+      spark-thrift:
+        condition: service_healthy
+    volumes:
+      - ./data:/opt/data
+      - ./dbt_project:/dbt_project
+      - ./scripts:/scripts
+    environment:
+      - SPARK_HOME=/opt/spark
+      - DBT_PROFILES_DIR=/dbt_project
+    working_dir: /dbt_project
+    # Keep alive for interactive use: docker exec -it dbt_runner bash
+    command: tail -f /dev/null
+
+volumes:
+  data:

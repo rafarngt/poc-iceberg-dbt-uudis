@@ -1,0 +1,6 @@
+center_cd,center_name,region,country,cost_type,status,valid_from,updated_at
+cd001,Centro Norte,Norte,MX,OPEX,ACTIVE,2023-01-01,2024-01-15 10:00:00
+cd002,Centro Sur,Sur,MX,CAPEX,ACTIVE,2023-01-01,2024-01-15 10:00:00
+cd003,Centro Este,Este,MX,OPEX,ACTIVE,2023-03-01,2024-02-20 09:30:00
+cd004,Centro Oeste,Oeste,MX,CAPEX,INACTIVE,2023-06-01,2024-03-10 14:00:00
+cd005,Centro CDMX,CDMX,MX,OPEX,ACTIVE,2023-06-01,2024-03-10 14:00:00
