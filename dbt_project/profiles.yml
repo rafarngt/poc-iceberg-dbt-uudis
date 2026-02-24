@@ -3,11 +3,11 @@ iceberg_spark:
   outputs:
     dev:
       type: spark
-      method: thrift
+      method: http
       host: spark-thrift       # nombre del servicio en docker-compose
       port: 10000
       user: sparkuser
-      auth: NOSASL
+      http_path: cliservice
       schema: default          # dbt usa este como database base
       connect_retries: 5
       connect_timeout: 60

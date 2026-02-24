@@ -33,7 +33,9 @@ services:
           --hiveconf hive.server2.thrift.bind.host=0.0.0.0 \
           --hiveconf hive.server2.thrift.port=10000 \
           --hiveconf hive.server2.authentication=NOSASL \
-          --conf spark.hive.server2.authentication=NOSASL \
+          --hiveconf hive.server2.transport.mode=http \
+          --hiveconf hive.server2.thrift.http.port=10000 \
+          --hiveconf hive.server2.thrift.http.path=cliservice \
         && tail -f /opt/spark/logs/*.out
     healthcheck:
       test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/10000"]
