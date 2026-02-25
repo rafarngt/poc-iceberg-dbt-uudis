@@ -85,6 +85,15 @@
   </property>
 
   <!-- ─────────────────────────────────────────────────────
+       PartitionExpressionProxy ligero (standalone no tiene hive-exec)
+       Sin esto: PartitionExpressionForMetastore class not found
+       ───────────────────────────────────────────────────── -->
+  <property>
+    <name>hive.metastore.expression.proxy</name>
+    <value>org.apache.hadoop.hive.metastore.DefaultPartitionExpressionProxy</value>
+  </property>
+
+  <!-- ─────────────────────────────────────────────────────
        Puerto Thrift del Metastore
        ───────────────────────────────────────────────────── -->
   <property>
