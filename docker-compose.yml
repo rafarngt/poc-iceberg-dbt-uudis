@@ -21,6 +21,8 @@ services:
       - bash
       - -c
       - |
+        cd /dbt_project && \
+        /opt/spark/bin/schematool -dbType derby -initSchema --verbose 2>&1 | tail -5 || true && \
         /opt/spark/sbin/start-thriftserver.sh \
           --master local[*] \
           --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
