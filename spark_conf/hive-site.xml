@@ -6,11 +6,27 @@
     <value>NOSASL</value>
   </property>
   <property>
+    <name>hive.server2.enable.doAs</name>
+    <value>false</value>
+  </property>
+  <property>
     <name>hive.server2.thrift.port</name>
     <value>10000</value>
   </property>
   <property>
     <name>hive.server2.thrift.bind.host</name>
     <value>0.0.0.0</value>
+  </property>
+  <property>
+    <name>hive.txn.manager</name>
+    <value>org.apache.hadoop.hive.ql.lockmgr.DummyTxnManager</value>
+  </property>
+  <property>
+    <name>hive.support.concurrency</name>
+    <value>false</value>
+  </property>
+  <property>
+    <name>hive.lock.manager</name>
+    <value>org.apache.hadoop.hive.ql.lockmgr.EmbeddedLockManager</value>
   </property>
 </configuration>
