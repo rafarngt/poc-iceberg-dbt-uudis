@@ -3,8 +3,10 @@ dbt_project/target/
 dbt_project/dbt_packages/
 dbt_project/logs/
 
-# Iceberg warehouse (datos locales, no commitear)
-data/warehouse/
+# Datos locales (MinIO y warehouse ya no son locales)
+data/
+metastore_db/
+derby.log
 
 # macOS
 .DS_Store

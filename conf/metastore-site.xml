@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+
+  <!-- ─────────────────────────────────────────────────────
+       Backend: MariaDB (reemplaza Derby embebido)
+       MariaDB crea el schema HMS completo incluyendo
+       HIVE_LOCKS, TXNS, TXN_COMPONENTS, etc.
+       ───────────────────────────────────────────────────── -->
+  <property>
+    <name>javax.jdo.option.ConnectionDriverName</name>
+    <value>com.mysql.cj.jdbc.Driver</value>
+  </property>
+  <property>
+    <name>javax.jdo.option.ConnectionURL</name>
+    <value>jdbc:mysql://mariadb:3306/metastore_db?createDatabaseIfNotExist=true&amp;useSSL=false&amp;allowPublicKeyRetrieval=true</value>
+  </property>
+  <property>
+    <name>javax.jdo.option.ConnectionUserName</name>
+    <value>admin</value>
+  </property>
+  <property>
+    <name>javax.jdo.option.ConnectionPassword</name>
+    <value>admin</value>
+  </property>
+
+  <!-- ─────────────────────────────────────────────────────
+       Warehouse en MinIO (S3-compatible)
+       ───────────────────────────────────────────────────── -->
+  <property>
+    <name>hive.metastore.warehouse.dir</name>
+    <value>s3a://warehouse/</value>
+  </property>
+
+  <!-- ─────────────────────────────────────────────────────
+       S3A → MinIO
+       ───────────────────────────────────────────────────── -->
+  <property>
+    <name>fs.s3a.endpoint</name>
+    <value>http://minio:9000</value>
+  </property>
+  <property>
+    <name>fs.s3a.access.key</name>
+    <value>minioadmin</value>
+  </property>
+  <property>
+    <name>fs.s3a.secret.key</name>
+    <value>minioadmin</value>
+  </property>
+  <property>
+    <name>fs.s3a.path.style.access</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>fs.s3a.impl</name>
+    <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
+  </property>
+  <property>
+    <name>fs.s3a.connection.ssl.enabled</name>
+    <value>false</value>
+  </property>
+
+  <!-- ─────────────────────────────────────────────────────
+       Schema auto-init (DataNucleus crea tablas si no existen)
+       ───────────────────────────────────────────────────── -->
+  <property>
+    <name>datanucleus.autoCreateSchema</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>datanucleus.autoCreateTables</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>datanucleus.autoCreateColumns</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>datanucleus.fixedDatastore</name>
+    <value>false</value>
+  </property>
+  <property>
+    <name>hive.metastore.schema.verification</name>
+    <value>false</value>
+  </property>
+
+  <!-- ─────────────────────────────────────────────────────
+       Puerto Thrift del Metastore
+       ───────────────────────────────────────────────────── -->
+  <property>
+    <name>hive.metastore.uris</name>
+    <value>thrift://0.0.0.0:9083</value>
+  </property>
+
+</configuration>

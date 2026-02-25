@@ -1,43 +1,135 @@
 services:
 
   # ─────────────────────────────────────────────
-  # Spark + Thrift Server (dbt connects here)
+  # MariaDB — Backend del Hive Metastore
+  # Reemplaza Derby embebido (que no tiene HIVE_LOCKS)
+  # ─────────────────────────────────────────────
+  mariadb:
+    image: mariadb:10.5
+    container_name: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin
+      MYSQL_DATABASE: metastore_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "admin", "-padmin"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # ─────────────────────────────────────────────
+  # MinIO — Object storage S3-compatible (simula S3)
+  # El warehouse de Iceberg vive aquí: s3a://warehouse/
+  # ─────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web UI (http://localhost:9001)
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ─────────────────────────────────────────────
+  # MinIO Init — Crea el bucket 'warehouse' automáticamente
+  # ─────────────────────────────────────────────
+  minio-init:
+    image: minio/mc:latest
+    container_name: minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin &&
+      mc mb --ignore-existing local/warehouse &&
+      mc mb --ignore-existing local/raw &&
+      echo 'Buckets created OK'
+      "
+
+  # ─────────────────────────────────────────────
+  # Hive Metastore — Standalone con schema completo
+  # Incluye HIVE_LOCKS, TXNS, etc. (MariaDB los crea todos)
+  # ─────────────────────────────────────────────
+  hive-metastore:
+    image: bitsondatadev/hive-metastore:latest
+    container_name: hive_metastore
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "9083:9083"
+    volumes:
+      - ./conf/metastore-site.xml:/opt/apache-hive-metastore-3.0.0-bin/conf/metastore-site.xml
+    environment:
+      METASTORE_DB_HOSTNAME: mariadb
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/9083"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # ─────────────────────────────────────────────
+  # Spark Thrift Server — dbt conecta aquí via NOSASL
+  # Spark 3.5.3 + Iceberg 1.6.1 + hadoop-aws (MinIO)
+  # spark_catalog type=hive → apunta al HMS externo
   # ─────────────────────────────────────────────
   spark-thrift:
     build: .
     image: spark-iceberg-dbt:latest
     container_name: spark_thrift_server
+    depends_on:
+      hive-metastore:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     volumes:
-      - ./data:/opt/data
       - ./dbt_project:/dbt_project
       - ./scripts:/scripts
     ports:
       - "4040:4040"   # Spark UI
-      - "10000:10000" # HiveServer2 / Thrift (dbt connects here)
+      - "10000:10000" # HiveServer2 / Thrift (dbt conecta aquí)
     environment:
       - SPARK_HOME=/opt/spark
       - DBT_PROFILES_DIR=/dbt_project
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
     command:
       - bash
       - -c
       - |
-        cd /dbt_project && \
-        /opt/spark/bin/schematool -dbType derby -initSchema 2>&1 | tail -3 || true && \
-        python3 /scripts/init_hive_txn_schema.py 2>&1 && \
         /opt/spark/sbin/start-thriftserver.sh \
           --master local[*] \
           --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
-          --conf spark.sql.catalog.iceberg=org.apache.iceberg.spark.SparkCatalog \
-          --conf spark.sql.catalog.iceberg.type=hadoop \
-          --conf spark.sql.catalog.iceberg.warehouse=/opt/data/warehouse \
           --conf spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkSessionCatalog \
           --conf spark.sql.catalog.spark_catalog.type=hive \
-          --conf spark.sql.catalog.spark_catalog.lock-enabled=false \
           --conf spark.sql.defaultCatalog=spark_catalog \
-          --conf spark.hadoop.datanucleus.autoCreateTables=true \
-          --conf spark.hadoop.datanucleus.schema.autoCreateTables=true \
-          --conf spark.hadoop.datanucleus.fixedDatastore=false \
-          --conf spark.hadoop.hive.metastore.schema.verification=false \
+          --conf spark.sql.warehouse.dir=s3a://warehouse/ \
+          --conf spark.hadoop.hive.metastore.uris=thrift://hive-metastore:9083 \
+          --conf spark.hadoop.fs.s3a.endpoint=http://minio:9000 \
+          --conf spark.hadoop.fs.s3a.access.key=minioadmin \
+          --conf spark.hadoop.fs.s3a.secret.key=minioadmin \
+          --conf spark.hadoop.fs.s3a.path.style.access=true \
+          --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
           --conf spark.sql.hive.thriftServer.singleSession=true \
           --conf "spark.driver.extraJavaOptions=-Dhive.server2.authentication=NOSASL" \
           --hiveconf hive.server2.thrift.bind.host=0.0.0.0 \
@@ -49,10 +141,11 @@ services:
       interval: 15s
       timeout: 10s
       retries: 10
-      start_period: 30s
+      start_period: 60s
 
   # ─────────────────────────────────────────────
-  # dbt runner (runs models against Thrift Server)
+  # dbt runner — ejecuta modelos contra el Thrift Server
+  # docker exec -it dbt_runner dbt run
   # ─────────────────────────────────────────────
   dbt:
     build: .
@@ -62,15 +155,14 @@ services:
       spark-thrift:
         condition: service_healthy
     volumes:
-      - ./data:/opt/data
       - ./dbt_project:/dbt_project
       - ./scripts:/scripts
     environment:
       - SPARK_HOME=/opt/spark
       - DBT_PROFILES_DIR=/dbt_project
     working_dir: /dbt_project
-    # Keep alive for interactive use: docker exec -it dbt_runner bash
     command: tail -f /dev/null
 
 volumes:
-  data:
+  mariadb_data:
+  minio_data:

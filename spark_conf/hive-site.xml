@@ -1,6 +1,10 @@
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
+
+  <!-- ─────────────────────────────────────────────────────
+       HiveServer2 — autenticación NOSASL para dbt-spark
+       ───────────────────────────────────────────────────── -->
   <property>
     <name>hive.server2.authentication</name>
     <value>NOSASL</value>
@@ -17,16 +21,42 @@
     <name>hive.server2.thrift.bind.host</name>
     <value>0.0.0.0</value>
   </property>
+
+  <!-- ─────────────────────────────────────────────────────
+       Hive Metastore externo (MariaDB-backed)
+       Apunta al contenedor hive-metastore en puerto 9083
+       ───────────────────────────────────────────────────── -->
   <property>
-    <name>hive.txn.manager</name>
-    <value>org.apache.hadoop.hive.ql.lockmgr.DummyTxnManager</value>
+    <name>hive.metastore.uris</name>
+    <value>thrift://hive-metastore:9083</value>
+  </property>
+
+  <!-- ─────────────────────────────────────────────────────
+       S3A → MinIO
+       ───────────────────────────────────────────────────── -->
+  <property>
+    <name>fs.s3a.endpoint</name>
+    <value>http://minio:9000</value>
   </property>
   <property>
-    <name>hive.support.concurrency</name>
+    <name>fs.s3a.access.key</name>
+    <value>minioadmin</value>
+  </property>
+  <property>
+    <name>fs.s3a.secret.key</name>
+    <value>minioadmin</value>
+  </property>
+  <property>
+    <name>fs.s3a.path.style.access</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>fs.s3a.impl</name>
+    <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
+  </property>
+  <property>
+    <name>fs.s3a.connection.ssl.enabled</name>
     <value>false</value>
   </property>
-  <property>
-    <name>hive.lock.manager</name>
-    <value>org.apache.hadoop.hive.ql.lockmgr.EmbeddedLockManager</value>
-  </property>
+
 </configuration>
