@@ -29,8 +29,7 @@ services:
           --conf spark.sql.catalog.iceberg.warehouse=/opt/data/warehouse \
           --conf spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkSessionCatalog \
           --conf spark.sql.catalog.spark_catalog.type=hive \
-          --conf spark.sql.catalog.spark_catalog.lock-impl=org.apache.iceberg.hadoop.HadoopLockManager \
-          --conf spark.sql.catalog.spark_catalog.lock.hadoop.fs.root=/opt/data/warehouse \
+          --conf spark.sql.catalog.spark_catalog.hive.lock-enabled=false \
           --conf spark.sql.defaultCatalog=spark_catalog \
           --conf spark.sql.hive.thriftServer.singleSession=true \
           --conf "spark.driver.extraJavaOptions=-Dhive.server2.authentication=NOSASL" \
