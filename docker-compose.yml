@@ -31,6 +31,10 @@ services:
           --conf spark.sql.catalog.spark_catalog.type=hive \
           --conf spark.sql.catalog.spark_catalog.lock-enabled=false \
           --conf spark.sql.defaultCatalog=spark_catalog \
+          --conf spark.hadoop.datanucleus.autoCreateTables=true \
+          --conf spark.hadoop.datanucleus.schema.autoCreateTables=true \
+          --conf spark.hadoop.datanucleus.fixedDatastore=false \
+          --conf spark.hadoop.hive.metastore.schema.verification=false \
           --conf spark.sql.hive.thriftServer.singleSession=true \
           --conf "spark.driver.extraJavaOptions=-Dhive.server2.authentication=NOSASL" \
           --hiveconf hive.server2.thrift.bind.host=0.0.0.0 \
