@@ -22,7 +22,8 @@ services:
       - -c
       - |
         cd /dbt_project && \
-        /opt/spark/bin/schematool -dbType derby -initSchema --verbose 2>&1 | tail -5 || true && \
+        /opt/spark/bin/schematool -dbType derby -initSchema 2>&1 | tail -3 || true && \
+        python3 /scripts/init_hive_txn_schema.py 2>&1 && \
         /opt/spark/sbin/start-thriftserver.sh \
           --master local[*] \
           --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
