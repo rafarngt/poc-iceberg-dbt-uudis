@@ -61,18 +61,21 @@ for schema in ["raw", "bronze", "silver", "gold"]:
 # ── Arrancar Thrift Server en este SparkContext ────────────────
 print("Starting HiveThriftServer2 on port 10000...")
 
-# Acceso directo al JVM para arrancar el Thrift Server
 jvm = spark._jvm
-hive_server = jvm.org.apache.spark.sql.hive.thriftserver.HiveThriftServer2
-hive_ctx = spark._jsparkSession
 
-# startWithContext espera (SQLContext, HiveConf)
+# Configurar HiveConf para el Thrift Server
 hive_conf = jvm.org.apache.hadoop.hive.conf.HiveConf()
 hive_conf.set("hive.server2.thrift.port", "10000")
 hive_conf.set("hive.server2.thrift.bind.host", "0.0.0.0")
 hive_conf.set("hive.server2.authentication", "NOSASL")
 
-hive_server.startWithContext(hive_ctx)
+# En Spark 3.5, startWithContext espera un SQLContext (no SparkSession)
+sql_ctx = spark._wrapped if hasattr(spark, '_wrapped') else spark._jsparkSession
+hive_server = jvm.org.apache.spark.sql.hive.thriftserver.HiveThriftServer2
+
+# Crear el SQLContext Java que el Thrift Server necesita
+java_sql_ctx = jvm.org.apache.spark.sql.SQLContext(spark._jsc.sc())
+hive_server.startWithContext(java_sql_ctx)
 
 print("HiveThriftServer2 started. Waiting for connections...")
 
