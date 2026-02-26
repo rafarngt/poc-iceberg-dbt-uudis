@@ -66,7 +66,7 @@ services:
       - bash
       - -c
       - |
-        /opt/spark/sbin/start-thriftserver.sh \
+        spark-submit \
           --master local[*] \
           --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
           --conf spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkSessionCatalog \
@@ -82,10 +82,7 @@ services:
           --conf spark.hadoop.fs.s3a.connection.ssl.enabled=false \
           --conf spark.sql.hive.thriftServer.singleSession=true \
           --conf "spark.driver.extraJavaOptions=-Dhive.server2.authentication=NOSASL" \
-          --hiveconf hive.server2.thrift.bind.host=0.0.0.0 \
-          --hiveconf hive.server2.thrift.port=10000 \
-          --hiveconf hive.server2.authentication=NOSASL \
-        && tail -f /opt/spark/logs/*.out
+          /scripts/thrift_with_udfs.py
     healthcheck:
       test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/10000"]
       interval: 15s
