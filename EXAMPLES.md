@@ -413,14 +413,33 @@ WHERE center_cd = 'cd004'
 
 ```mermaid
 flowchart TD
-    Q1{"¿El downstream necesita\nhistorial o auditoría?"}
+    Q1{"¿El downstream necesita
+    historial o auditoría?"}
 
-    Q1 -- NO --> SCD1["✅ SCD Type 1\n─────────────\nsk_name estable\n1 fila por center_cd\ndbt: merge + COALESCE\nMás simple, más rápido"]
-    Q1 -- SÍ --> Q2{"¿Necesita saber\nel estado en\nun punto del tiempo?"}
+    Q1 -- NO --> SCD1["✅ SCD Type 1
+    ─────────────
+    sk_name estable
+    1 fila por center_cd
+    dbt: merge + COALESCE
+    Más simple, más rápido"]
+    Q1 -- SÍ --> Q2{"¿Necesita saber
+    el estado en
+    un punto del tiempo?"}
 
-    Q2 -- SÍ --> SCD2["✅ SCD Type 2\n─────────────\nsk_name por versión\nN filas por center_cd\ndbt: pre_hook MERGE + append\nPoint-in-time queries"]
+    Q2 -- SÍ --> SCD2["✅ SCD Type 2
+    ─────────────
+    sk_name por versión
+    N filas por center_cd
+    dbt: pre_hook MERGE + append
+    Point-in-time queries"]
     Q2 -- NO --> SCD1
 
-    SCD1 --> NOTE1["⚠️ Si el dato cambia en SAP:\nel SK no cambia\nlos datos se sobreescriben\nno hay forma de recuperar el estado anterior"]
-    SCD2 --> NOTE2["⚠️ Si el dato cambia en SAP:\nse genera nuevo SK\nel SK anterior queda cerrado con valid_to\nel downstream upstream puede seguir usando el SK viejo"]
+    SCD1 --> NOTE1["⚠️ Si el dato cambia en SAP:
+    el SK no cambia
+    los datos se sobreescriben
+    no hay forma de recuperar el estado anterior"]
+    SCD2 --> NOTE2["⚠️ Si el dato cambia en SAP:
+    se genera nuevo SK
+    el SK anterior queda cerrado con valid_to
+    el downstream upstream puede seguir usando el SK viejo"]
 ```
