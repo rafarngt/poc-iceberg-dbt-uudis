@@ -20,11 +20,6 @@ from pyspark.sql import SparkSession
 spark = (
     SparkSession.builder
     .appName("query_comparison")
-    .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
-    .config("spark.sql.catalog.iceberg", "org.apache.iceberg.spark.SparkCatalog")
-    .config("spark.sql.catalog.iceberg.type", "hadoop")
-    .config("spark.sql.catalog.iceberg.warehouse", "/opt/data/warehouse")
-    .config("spark.sql.defaultCatalog", "iceberg")
     .getOrCreate()
 )
 
@@ -43,7 +38,7 @@ spark.sql("""
         center_name,
         status,
         _silver_updated_at
-    FROM iceberg.silver.silver_cost_centers_scd1
+    FROM spark_catalog.silver.silver_cost_centers_scd1
     ORDER BY center_cd
 """).show(truncate=False)
 
@@ -61,7 +56,7 @@ spark.sql("""
         status,
         valid_from_sk,
         is_current
-    FROM iceberg.silver.silver_cost_centers_scd2
+    FROM spark_catalog.silver.silver_cost_centers_scd2
     WHERE is_current = true
     ORDER BY center_cd
 """).show(truncate=False)
@@ -81,7 +76,7 @@ spark.sql("""
         valid_from_sk,
         valid_to,
         is_current
-    FROM iceberg.silver.silver_cost_centers_scd2
+    FROM spark_catalog.silver.silver_cost_centers_scd2
     ORDER BY center_cd, valid_from_sk
 """).show(truncate=False)
 
@@ -100,7 +95,7 @@ spark.sql("""
         scd2_status,
         has_history,
         scd2_total_versions
-    FROM iceberg.gold.gold_cost_centers_comparison
+    FROM spark_catalog.gold.gold_cost_centers_comparison
     ORDER BY center_cd
 """).show(truncate=False)
 
@@ -118,7 +113,7 @@ spark.sql("""
         status,
         valid_from_sk,
         valid_to
-    FROM iceberg.silver.silver_cost_centers_scd2
+    FROM spark_catalog.silver.silver_cost_centers_scd2
     WHERE center_cd = 'cd004'
       AND valid_from_sk <= TIMESTAMP'2024-06-01 00:00:00'
       AND (valid_to IS NULL OR valid_to > TIMESTAMP'2024-06-01 00:00:00')
@@ -132,7 +127,7 @@ print("  ICEBERG TIME TRAVEL - Historial de snapshots en bronze")
 print(DIVIDER)
 spark.sql("""
     SELECT snapshot_id, committed_at, operation, summary
-    FROM iceberg.bronze.bronze_cost_centers.snapshots
+    FROM spark_catalog.bronze.bronze_cost_centers.snapshots
     ORDER BY committed_at
 """).show(truncate=False)
 

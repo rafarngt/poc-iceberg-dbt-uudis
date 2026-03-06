@@ -19,3 +19,12 @@ __pycache__/
 
 # Docker
 *.log
+
+# Claude Code
+.claude/
+
+# dbt user config
+dbt_project/.user.yml
+
+# Local Spark warehouse
+dbt_project/spark-warehouse/

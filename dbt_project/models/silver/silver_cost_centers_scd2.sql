@@ -43,24 +43,30 @@
 */
 
 -- PASO 1: Cerrar versiones activas que cambiaron en SAP
+-- Nota: el pre_hook solo se ejecuta cuando la tabla ya existe (is_incremental),
+-- evitando el error chicken-and-egg en el primer run.
 {{ config(
     pre_hook = "
-      MERGE INTO {{ this }} AS target
-      USING (
-          SELECT DISTINCT
-              b.center_cd,
-              b.source_updated_at AS new_ts
-          FROM {{ ref('bronze_cost_centers') }} b
-          INNER JOIN {{ this }} t
-              ON  b.center_cd         = t.center_cd
-              AND t.is_current        = true
-              AND b.source_updated_at > t.source_updated_at
-      ) AS updates
-      ON  target.center_cd  = updates.center_cd
-      AND target.is_current = true
-      WHEN MATCHED THEN UPDATE SET
-          target.is_current = false,
-          target.valid_to   = updates.new_ts
+      {% if is_incremental() %}
+        MERGE INTO {{ this }} AS target
+        USING (
+            SELECT DISTINCT
+                b.center_cd,
+                b.source_updated_at AS new_ts
+            FROM {{ ref('bronze_cost_centers') }} b
+            INNER JOIN {{ this }} t
+                ON  b.center_cd         = t.center_cd
+                AND t.is_current        = true
+                AND b.source_updated_at > t.source_updated_at
+        ) AS updates
+        ON  target.center_cd  = updates.center_cd
+        AND target.is_current = true
+        WHEN MATCHED THEN UPDATE SET
+            target.is_current = false,
+            target.valid_to   = updates.new_ts
+      {% else %}
+        SELECT 1
+      {% endif %}
     "
 ) }}
 
