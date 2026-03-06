@@ -163,8 +163,8 @@ block-beta
 ```mermaid
 flowchart TD
     A["Bronze
-    cd004 | ACTIVE | 2025-06-01
-    "] --> B{{"¿Existe cd004
+    cd004 | ACTIVE | 2025-06-01"] 
+    --> B{{"¿Existe cd004
     en SCD2
     con is_current=true?"}}
 
@@ -190,8 +190,8 @@ flowchart TD
     (tabla Iceberg)
     ────────────────
     aaa-111 | INACTIVE | false ❌
-    bbb-222 | ACTIVE   | true  ✅
-    ")]
+    bbb-222 | ACTIVE   | true  ✅")
+    ]
 ```
 
 ---
