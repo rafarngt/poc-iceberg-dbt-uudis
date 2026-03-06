@@ -162,15 +162,34 @@ block-beta
 
 ```mermaid
 flowchart TD
-    A["Bronze\ncd004 | ACTIVE | 2025-06-01"] --> B{{"¿Existe cd004\nen SCD2\ncon is_current=true?"}}
+    A["Bronze
+    cd004 | ACTIVE | 2025-06-01"] --> B{{"¿Existe cd004
+    en SCD2
+    con is_current=true?"}}
 
-    B -- SÍ --> C["Iceberg MERGE INTO\n─────────────────\nWHEN MATCHED THEN UPDATE\n  is_current = false\n  valid_to   = 2025-06-01"]
-    B -- NO --> D["Registro nuevo\n(sin historial previo)"]
+    B -- SÍ --> C["Iceberg MERGE INTO
+    ─────────────────
+    WHEN MATCHED THEN UPDATE
+      is_current = false 
+      valid_to = 2025-06-01"]
+    B -- NO --> D["Registro nuevo
+    (sin historial previo)"]
 
-    C --> E["APPEND nuevo registro\n─────────────────\nsk_name    = uuid()  → 'bbb-222'\ncenter_cd  = 'cd004'\nstatus     = 'ACTIVE'\nis_current = true\nvalid_from = 2025-06-01\nvalid_to   = NULL"]
+    C --> E["APPEND nuevo registro
+    ─────────────────
+    sk_name    = uuid()  → 'bbb-222'
+    center_cd  = 'cd004'
+    status     = 'ACTIVE'
+    is_current = true
+    valid_from = 2025-06-01
+    valid_to   = NULL"]
     D --> E
 
-    E --> F[("Silver SCD2\n(tabla Iceberg)\n────────────────\naaa-111 | INACTIVE | false ❌\nbbb-222 | ACTIVE   | true  ✅")]
+    E --> F[("Silver SCD2
+    (tabla Iceberg)
+    ────────────────
+    aaa-111 | INACTIVE | false ❌
+    bbb-222 | ACTIVE   | true  ✅")]
 ```
 
 ---
