@@ -26,25 +26,56 @@ cd004     | Centro Oeste  | ACTIVE | 2025-06-01 09:00:00
 
 ```mermaid
 flowchart LR
-    SAP["🏭 SAP\n(origen)"]
+    SAP["🏭 SAP 
+    (origen)"]
 
     subgraph DL["Datalake — Apache Iceberg + dbt"]
         direction TB
-        BRZ["🟫 Bronze\nbronze_cost_centers\n─────────────────\ncenter_cd  ← natural key\nsource_updated_at\n_ingested_at\nstrategy: MERGE"]
+        BRZ["🟫 Bronze 
+        bronze_cost_centers
+        ─────────────────
+        center_cd  ← natural key
+        source_updated_at
+        _ingested_at
+        strategy: MERGE"]
 
         subgraph SLV["⬜ Silver"]
-            SCD1["SCD Type 1\nsilver_cost_centers_scd1\n─────────────────\nsk_name  ← UUID estable\ncenter_cd\ncenter_name\nstatus\n(1 fila por center_cd)"]
-            SCD2["SCD Type 2\nsilver_cost_centers_scd2\n─────────────────\nsk_name  ← UUID por versión\ncenter_cd\nstatus\nvalid_from_sk\nvalid_to\nis_current\n(N filas por center_cd)"]
+            SCD1["SCD Type 1
+            silver_cost_centers_scd1
+            ─────────────────
+            sk_name  ← UUID estable
+            center_cd
+            center_name
+            status
+            (1 fila por center_cd)"]
+            SCD2["SCD Type 2
+            silver_cost_centers_scd2
+            ─────────────────
+            sk_name  ← UUID por versión
+            center_cd
+            status
+            valid_from_sk
+            valid_to
+            is_current
+            (N filas por center_cd)"]
         end
 
-        GLD["🟡 Gold\ngold_cost_centers_comparison\n─────────────────\nsk1_uuid vs sk2_uuid\nhas_history\ntotal_versions"]
+        GLD["🟡 Gold
+        gold_cost_centers_comparison
+        ─────────────────
+        sk1_uuid vs sk2_uuid
+        has_history
+        total_versions"]
     end
 
-    DS["📊 Downstream\n(BI, ML, APIs)"]
+    DS["📊 Downstream
+    (BI, ML, APIs)"]
 
     SAP -->|"dbt seed / ingest"| BRZ
-    BRZ -->|"incremental MERGE\nuniquekey=center_cd"| SCD1
-    BRZ -->|"pre_hook MERGE +\nappend new version"| SCD2
+    BRZ -->|"incremental MERGE
+    uniquekey=center_cd"| SCD1
+    BRZ -->|"pre_hook MERGE +
+    append new version"| SCD2
     SCD1 --> GLD
     SCD2 --> GLD
     GLD --> DS
