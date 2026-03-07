@@ -4,7 +4,29 @@
     incremental_strategy = 'append',
     file_format          = 'iceberg',
     table_type           = 'iceberg',
-    on_schema_change     = 'sync_all_columns',
+    on_schema_change     = 'ignore',
+    pre_hook             = "
+      {% if is_incremental() %}
+        MERGE INTO {{ this }} AS target
+        USING (
+            SELECT DISTINCT
+                b.center_cd,
+                b.source_updated_at AS new_ts
+            FROM {{ ref('bronze_cost_centers') }} b
+            INNER JOIN {{ this }} t
+                ON  b.center_cd         = t.center_cd
+                AND t.is_current        = true
+                AND b.source_updated_at > t.source_updated_at
+        ) AS updates
+        ON  target.center_cd  = updates.center_cd
+        AND target.is_current = true
+        WHEN MATCHED THEN UPDATE SET
+            target.is_current = false,
+            target.valid_to   = updates.new_ts
+      {% else %}
+        SELECT 1
+      {% endif %}
+    ",
     post_hook            = "ALTER TABLE {{ this }} SET TBLPROPERTIES ('write.distribution-mode'='range')"
   )
 }}
@@ -33,50 +55,29 @@
   SEED DEL UUID v5:
     concat(center_cd, '|', cast(source_updated_at as string))
     Identifica de forma única una VERSIÓN:
-      center_cd        → qué entidad
+      center_cd         → qué entidad
       source_updated_at → cuándo cambió en SAP
 
   MECANISMO (2 pasos por run):
     PASO 1 (pre_hook): MERGE INTO cierra versiones vigentes que
-                       cambiaron → is_current=false, valid_to=now
-    PASO 2 (append):   Inserta nuevas versiones con uuid5_sk(seed)
+                       cambiaron → is_current=false, valid_to=new_ts
+    PASO 2 (append):   INSERT INTO con nuevas versiones uuid5_sk(seed)
+
+  POR QUÉ on_schema_change='ignore':
+    Con dbt-spark + Iceberg + append, 'sync_all_columns' puede forzar
+    un full-rebuild si detecta discrepancias de tipos entre runs,
+    lo que destruye el historial. 'ignore' garantiza que siempre
+    corra en modo incremental y preserve las versiones cerradas.
 */
 
--- PASO 1: Cerrar versiones activas que cambiaron en SAP
--- Nota: el pre_hook solo se ejecuta cuando la tabla ya existe (is_incremental),
--- evitando el error chicken-and-egg en el primer run.
-{{ config(
-    pre_hook = "
-      {% if is_incremental() %}
-        MERGE INTO {{ this }} AS target
-        USING (
-            SELECT DISTINCT
-                b.center_cd,
-                b.source_updated_at AS new_ts
-            FROM {{ ref('bronze_cost_centers') }} b
-            INNER JOIN {{ this }} t
-                ON  b.center_cd         = t.center_cd
-                AND t.is_current        = true
-                AND b.source_updated_at > t.source_updated_at
-        ) AS updates
-        ON  target.center_cd  = updates.center_cd
-        AND target.is_current = true
-        WHEN MATCHED THEN UPDATE SET
-            target.is_current = false,
-            target.valid_to   = updates.new_ts
-      {% else %}
-        SELECT 1
-      {% endif %}
-    "
-) }}
-
--- PASO 2: Insertar nuevas versiones con UUID v5 deterministico
+-- Insertar nuevas versiones con UUID v5 deterministico
 WITH bronze_data AS (
     SELECT *
     FROM {{ ref('bronze_cost_centers') }}
 ),
 
 {% if is_incremental() %}
+-- Solo registros nuevos o que cambiaron en SAP
 changed_records AS (
     SELECT b.*
     FROM bronze_data b
@@ -88,6 +89,7 @@ changed_records AS (
         OR b.source_updated_at > t.source_updated_at  -- cambió en SAP
 )
 {% else %}
+-- Primer run: todos los registros de bronze
 changed_records AS (
     SELECT * FROM bronze_data
 )

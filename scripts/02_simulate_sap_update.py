@@ -1,66 +1,96 @@
 """
 Script 02 - Simular actualizaciones en el origen SAP
 ─────────────────────────────────────────────────────
-Este script simula un UPDATE que llega desde SAP:
-  - Actualiza el status de cd004 de INACTIVE -> ACTIVE
-  - Cambia el center_name de cd003
-  - Agrega un nuevo registro cd006
+Simula un UPDATE que llega desde SAP actualizando la capa RAW
+via conexión directa al Thrift Server (mismo contexto que dbt).
 
-Después de correr este script, vuelve a ejecutar dbt run
-y observa la diferencia de comportamiento entre SCD1 y SCD2.
+Esto garantiza que el pipeline completo funcione correctamente:
+  raw → bronze → silver (SCD1 + SCD2) → gold
+
+Cambios simulados:
+  - cd004: INACTIVE → ACTIVE  (cambio de status)
+  - cd003: rename → "Centro Este 2.0"
+  - cd006: nuevo registro "Centro Bajio"
 
 Ejecutar:
-  spark-submit /scripts/02_simulate_sap_update.py
+  python3 /scripts/02_simulate_sap_update.py
+  (desde spark_thrift_server o dbt_runner)
 """
 
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import current_timestamp, lit
+from pyhive import hive
 from datetime import datetime
 
-spark = (
-    SparkSession.builder
-    .appName("simulate_sap_update")
-    .getOrCreate()
-)
+NOW  = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+HOST = "spark-thrift"
 
-NOW = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+conn = hive.connect(HOST, port=10000, auth="NOSASL")
+cur  = conn.cursor()
 
 print(f"\n{'='*60}")
 print(f"  SIMULACION DE UPDATE EN SAP - {NOW}")
 print(f"{'='*60}\n")
 
-# ─── Leer tabla bronze actual ───────────────────────────────
+# ─── Estado actual (bronze, antes del update) ───────────────
 print("Estado ANTES del update en bronze:")
-spark.sql("SELECT center_cd, center_name, status, source_updated_at FROM spark_catalog.bronze.bronze_cost_centers").show()
+cur.execute("""
+    SELECT center_cd, center_name, status, source_updated_at
+    FROM spark_catalog.bronze.bronze_cost_centers
+    ORDER BY center_cd
+""")
+rows = cur.fetchall()
+print(f"{'center_cd':<12} {'center_name':<20} {'status':<10} source_updated_at")
+print("-" * 65)
+for r in rows:
+    print(f"{r[0]:<12} {r[1]:<20} {r[2]:<10} {r[3]}")
 
-# ─── MERGE bronze: simular updates SAP ──────────────────────
-spark.sql(f"""
-    MERGE INTO spark_catalog.bronze.bronze_cost_centers AS target
-    USING (
-        SELECT * FROM VALUES
-            -- cd004: INACTIVE -> ACTIVE  (update de status)
-            ('cd004', 'Centro Oeste',    'Oeste', 'MX', 'CAPEX', 'ACTIVE',   DATE'2023-06-01', TIMESTAMP'{NOW}', TIMESTAMP'{NOW}', 'SAP'),
-            -- cd003: cambio de nombre
-            ('cd003', 'Centro Este 2.0', 'Este',  'MX', 'OPEX',  'ACTIVE',   DATE'2023-03-01', TIMESTAMP'{NOW}', TIMESTAMP'{NOW}', 'SAP'),
-            -- cd006: registro nuevo
-            ('cd006', 'Centro Bajio',    'Bajio', 'MX', 'OPEX',  'ACTIVE',   DATE'2025-01-01', TIMESTAMP'{NOW}', TIMESTAMP'{NOW}', 'SAP')
-        AS updates(center_cd, center_name, region, country, cost_type, status, valid_from, source_updated_at, _ingested_at, _source_system)
-    ) AS src
-    ON target.center_cd = src.center_cd
-    WHEN MATCHED THEN UPDATE SET
-        target.center_name       = src.center_name,
-        target.status            = src.status,
-        target.source_updated_at = src.source_updated_at,
-        target._ingested_at      = src._ingested_at
-    WHEN NOT MATCHED THEN INSERT *
+# ─── Actualizar raw via dos pasos para evitar auto-referencia ────
+# INSERT OVERWRITE leyendo de la misma tabla falla con Spark
+# (UNSUPPORTED_OVERWRITE.TABLE). Solución: tabla temporal →
+# INSERT OVERWRITE desde temp → DROP temp.
+
+# Paso 1: materializar los datos modificados en una tabla temporal
+cur.execute(f"""
+    CREATE TABLE raw.sap_raw_tmp AS
+    SELECT
+        center_cd,
+        CASE WHEN center_cd = 'cd003' THEN 'Centro Este 2.0' ELSE center_name END AS center_name,
+        region,
+        country,
+        cost_type,
+        CASE WHEN center_cd = 'cd004' THEN 'ACTIVE' ELSE status END AS status,
+        valid_from,
+        CASE
+            WHEN center_cd IN ('cd003', 'cd004') THEN TIMESTAMP '{NOW}'
+            ELSE updated_at
+        END AS updated_at
+    FROM raw.sap_cost_centers_raw
+    UNION ALL
+    SELECT 'cd006', 'Centro Bajio', 'Bajio', 'MX', 'OPEX', 'ACTIVE',
+           DATE '2025-01-01', TIMESTAMP '{NOW}'
 """)
 
-print("\nEstado DESPUES del update en bronze:")
-spark.sql("SELECT center_cd, center_name, status, source_updated_at FROM spark_catalog.bronze.bronze_cost_centers ORDER BY center_cd").show()
+# Paso 2: sobreescribir raw desde la temporal (sin auto-referencia)
+cur.execute("INSERT OVERWRITE raw.sap_cost_centers_raw SELECT * FROM raw.sap_raw_tmp")
+
+# Paso 3: limpiar tabla temporal
+cur.execute("DROP TABLE raw.sap_raw_tmp")
+
+print("\nRaw actualizado con cambios de SAP:")
+cur.execute("""
+    SELECT center_cd, center_name, status, updated_at
+    FROM raw.sap_cost_centers_raw
+    ORDER BY center_cd
+""")
+rows = cur.fetchall()
+print(f"{'center_cd':<12} {'center_name':<20} {'status':<10} updated_at")
+print("-" * 65)
+for r in rows:
+    print(f"{r[0]:<12} {r[1]:<20} {r[2]:<10} {r[3]}")
+
+conn.close()
 
 print("\n" + "="*60)
 print("  AHORA ejecuta: dbt run  (desde el contenedor dbt_runner)")
-print("  Luego ejecuta: python3 /scripts/03_query_comparison.py")
+print("  Pipeline: raw -> bronze -> silver (SCD1+SCD2) -> gold")
+print("  Luego ejecuta: spark-submit /scripts/03_query_comparison.py")
 print("="*60 + "\n")
-
-spark.stop()
